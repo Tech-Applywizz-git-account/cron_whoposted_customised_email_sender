@@ -1,0 +1,21 @@
+{
+  "name": "cron_whoposted_mail_sending",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@azure/msal-node": "^5.2.0",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
+    "@supabase/supabase-js": "^2.105.4",
+    "dotenv": "^17.4.2",
+    "isomorphic-fetch": "^3.0.0",
+    "luxon": "^3.7.2",
+    "node-cron": "^4.2.1"
+  }
+}
