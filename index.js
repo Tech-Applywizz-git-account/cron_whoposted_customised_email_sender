@@ -53,16 +53,25 @@ let isRunning = false;
 // ============================================================
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-async function downloadAttachment(url) {
-    try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        const buffer = Buffer.from(await response.arrayBuffer());
-        return buffer.toString("base64");
-    } catch (err) {
-        console.error(`[Attachment] Failed to download ${url}:`, err.message);
-        return null;
+async function downloadAttachment(url, retries = 3, delay = 2000) {
+    for (let i = 1; i <= retries; i++) {
+        try {
+            const response = await fetch(url);
+            if (response.status === 502 || !response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            const buffer = Buffer.from(await response.arrayBuffer());
+            return buffer.toString("base64");
+        } catch (err) {
+            console.warn(`[Attachment] Attempt ${i}/${retries} failed to download ${url}: ${err.message}`);
+            if (i === retries) {
+                console.error(`[Attachment] Max retries reached. Failed to download ${url}.`);
+                return null;
+            }
+            await sleep(delay);
+        }
     }
+    return null;
 }
 
 // ============================================================
@@ -287,20 +296,24 @@ async function processDueCampaigns() {
 // ============================================================
 //  CRON SCHEDULE — every 5 minutes, IST timezone
 // ============================================================
-cron.schedule("*/5 * * * *", () => {
-    processDueCampaigns();
-}, {
-    scheduled: true,
-    timezone: "Asia/Kolkata"
-});
+if (!process.env.VERCEL) {
+    cron.schedule("*/5 * * * *", () => {
+        processDueCampaigns();
+    }, {
+        scheduled: true,
+        timezone: "Asia/Kolkata"
+    });
 
-console.log("=================================================");
-console.log("  WhoPosted Dynamic Campaign Mailer — LIVE");
-console.log("  Schedule: Every 5 minutes (IST)");
-console.log("  Mode: Dynamic date+time per campaign");
-console.log("  Failover: Auto-retry failed campaigns (max 3x / 30min)");
-console.log("  Lock: Single-instance execution guard active");
-console.log(`  Users Table: ${USERS_TABLE}`);
-console.log("=================================================\n");
+    console.log("=================================================");
+    console.log("  WhoPosted Dynamic Campaign Mailer — LIVE");
+    console.log("  Schedule: Every 5 minutes (IST)");
+    console.log("  Mode: Dynamic date+time per campaign");
+    console.log("  Failover: Auto-retry failed campaigns (max 3x / 30min)");
+    console.log("  Lock: Single-instance execution guard active");
+    console.log(`  Users Table: ${USERS_TABLE}`);
+    console.log("=================================================\n");
+} else {
+    console.log("[Serverless] Running in serverless context. Internal cron scheduler disabled.");
+}
 
 module.exports = { processDueCampaigns };
